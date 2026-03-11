@@ -7,6 +7,7 @@ import plotly.express as px
 import plotly.io as pio
 import json
 import io
+import os
 
 app = FastAPI()
 
@@ -47,6 +48,9 @@ async def upload_file(file: UploadFile = File(...)):
         # Strip invisible whitespace from column headers to prevent silent KeyErrors in grouping
         current_df.columns = current_df.columns.str.strip()
         
+        # Cache dataset to local disk for cross-worker cloud persistence
+        current_df.to_csv("dataset_cache.csv", index=False)
+        
         # Calculate Data Quality Metrics
         total_rows = len(current_df)
         total_cols = len(current_df.columns)
@@ -77,6 +81,9 @@ async def upload_file(file: UploadFile = File(...)):
 async def clean_data(action: str = Form(...)):
     global current_df
     if current_df is None:
+        if os.path.exists("dataset_cache.csv"):
+            current_df = pd.read_csv("dataset_cache.csv")
+    if current_df is None:
         return JSONResponse(status_code=400, content={"error": "No dataset uploaded"})
     
     try:
@@ -96,6 +103,9 @@ async def clean_data(action: str = Form(...)):
         total_cols = len(current_df.columns)
         missing_values = current_df.isnull().sum().to_dict()
         duplicate_rows = current_df.duplicated().sum()
+
+        # Cache the cleaned dataset
+        current_df.to_csv("dataset_cache.csv", index=False)
 
         return {
             "message": f"Action {action} applied.",
@@ -120,6 +130,10 @@ async def generate_plot(
     aggregation: str = Form(None)
 ):
     global current_df
+    if current_df is None:
+        if os.path.exists("dataset_cache.csv"):
+            current_df = pd.read_csv("dataset_cache.csv")
+            
     if current_df is None:
         return JSONResponse(status_code=400, content={"error": "No dataset uploaded yet. The backend was hot-reloaded! Please click 'Upload File' to reload your data."})
     
