@@ -149,7 +149,10 @@ async def generate_plot(
         plot_df = current_df.copy()
         agg_method = aggregation if aggregation and aggregation != "None" else None
 
-        if agg_method:
+        # Histograms and Box plots are statistical distributions that MUST receive raw, unaggregated data to calculate bins/variance natively.
+        is_statistical_chart = chart_type in ["Histogram", "Box"]
+
+        if agg_method and not is_statistical_chart:
             group_cols = [x_col]
             if color_arg:
                 group_cols.append(color_arg)
