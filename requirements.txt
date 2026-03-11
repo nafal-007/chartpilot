@@ -1,5 +1,9 @@
-streamlit
+fastapi
+uvicorn
 pandas
 plotly
 openpyxl
 kaleido
+python-multipart
+jinja2
+gunicorn

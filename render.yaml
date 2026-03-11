@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: chartpilot-ai
+    env: python
+    region: ohio # or frankfurt, oregon, etc
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
