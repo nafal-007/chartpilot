@@ -155,28 +155,29 @@ async def generate_plot(
         if agg_method and not is_statistical_chart:
             group_cols = [x_col]
             if color_arg:
-                group_cols.append(color_arg)
-                
-            if not y_arg or (y_arg and not pd.api.types.is_numeric_dtype(plot_df[y_arg]) and agg_method != "Count"):
-                # Graceful fallback: Default to Count frequencies for invalid mathematical operations
-                plot_df = plot_df.groupby(group_cols, as_index=False).size()
-                plot_df.rename(columns={"size": "Count"}, inplace=True)
-                y_arg = "Count"
-                agg_method = "Count"
-            elif y_arg and pd.api.types.is_numeric_dtype(plot_df[y_arg]):
-                if agg_method == "Sum":
-                    plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].sum()
-                elif agg_method == "Average":
-                    plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].mean()
-                elif agg_method == "Count":
-                    plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].count()
-                elif agg_method == "Min":
-                    plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].min()
-                elif agg_method == "Max":
-                    plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].max()
+                 group_cols.append(color_arg)
+                 
+            if agg_method in ["Sum", "Average", "Min", "Max"]:
+                 if not y_arg:
+                      return JSONResponse(status_code=400, content={"error": f"Aggregation '{agg_method}' requires a Y-Axis numerical column."})
+                 if not pd.api.types.is_numeric_dtype(plot_df[y_arg]):
+                      return JSONResponse(status_code=400, content={"error": f"Column '{y_arg}' is not numeric. Cannot calculate '{agg_method}'."})
+                 
+                 if agg_method == "Sum":
+                     plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].sum()
+                 elif agg_method == "Average":
+                     plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].mean()
+                 elif agg_method == "Min":
+                     plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].min()
+                 elif agg_method == "Max":
+                     plot_df = plot_df.groupby(group_cols, as_index=False)[y_arg].max()
+            elif agg_method == "Count":
+                 plot_df = plot_df.groupby(group_cols, as_index=False).size()
+                 plot_df.rename(columns={"size": "Count"}, inplace=True)
+                 y_arg = "Count"
                     
-        # Fallback for single-column Pie/Scatter charts (count frequencies if no Y is provided to avoid invisible 1D lines)
-        if chart_type in ["Pie", "Scatter"] and not y_arg:
+        # Fallback for single-column charts (count frequencies if no Y is provided to avoid invisible 1D lines)
+        if chart_type in ["Pie", "Scatter", "Bar", "Line", "Area"] and not y_arg:
             plot_df = plot_df.groupby([x_col], as_index=False).size()
             plot_df.rename(columns={"size": "Count"}, inplace=True)
             y_arg = 'Count'
